@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpiritCanvas</title>
+    <style>
+        /* Imported from style.css for consistency */
+        @import url("//fonts.googleapis.com/css2?family=Amiri:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap");
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background-image: linear-gradient(to right, #40e0d0 0%, #ff8c00 33%, #ff0080 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        h1 {
+            text-align: center;
+            color: #3b6c6c;
+            margin-bottom: 10px;
+            font-size: 3rem; /* Slightly larger for welcome page */
+            font-family: Palatino, 'Palatino Linotype', 'Palatino LT STD', 'Book Antiqua', Georgia, serif;
+            box-shadow: none;
+            transform: translatex(0px) translatey(0px);
+            margin-top: 0;
+        }
+
+        .app-description {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.5;
+            font-family: 'Amiri', serif;
+            padding-left: 25px;
+            padding-right: 25px;
+        }
+
+        .welcome-container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 20px;
+            border-radius: 50%;
+            background: linear-gradient(to right, #f7971e 0%, #ffd200 100%); /* Logo color from style.css */
+            display: none; /* Hide the logo */
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0px 15px 20px 5px rgba(0,0,0,0.2); /* Logo shadow from style.css */
+        }
+
+        .logo span, .logo-text /* Ensure consistent logo text styling */ {
+            color: #333; /* Adjust if needed */
+            font-size: 60px; /* From style.css */
+            font-family: 'Amiri', serif; /* From style.css */
+            font-style: normal; /* From style.css */
+            font-weight: bold; /* Keep it bold */
+            letter-spacing: 1px; /* Keep spacing */
+        }
+
+        /* Login button styles from style.css, adapted */
+        .login-button {
+            display: inline-flex;
+            align-items: center;
+            background-color: #4285F4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0; /* Keep padding control to inner elements */
+            cursor: pointer;
+            font-size: 16px; /* Keep specific size */
+            font-weight: bold; /* Keep bold */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25); /* Keep specific shadow */
+            text-decoration: none;
+            overflow: hidden;
+            margin-top: 20px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .login-button:hover {
+            background-color: #3367D6; /* Hover from style.css */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Keep specific hover shadow */
+            transform: translateY(-1px); /* Hover effect from style.css */
+        }
+
+        .login-button .icon {
+            background-color: white;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-button .icon img {
+            width: 18px;
+            height: 18px;
+        }
+
+        .login-button .text {
+            padding: 12px 16px; /* Adjusted padding for better appearance */
+        }
+
+    </style>
+</head>
+<body>
+    <div class="welcome-container">
+        <div class="logo">
+            <span class="logo-text">SC</span>
+        </div>
+        <h1>SpiritCanvas</h1>
+        <p class="app-description">Manage your creative career pathways with a visual canvas. Track your progress and organize your journey in art and design.</p>
+        
+        <a href="/auth/google" class="login-button">
+            <span class="icon">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo">
+            </span>
+            <span class="text">Sign in with Google</span>
+        </a>
+    </div>
+</body>
+</html>

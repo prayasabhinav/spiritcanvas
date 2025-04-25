@@ -1,0 +1,56 @@
+<%- include('../partials/header') %>
+
+<body>
+
+<div class="edit-pathway-main-container">
+    <h1>Edit Pathway: <%= pathway.name %></h1>
+    <p>Edit the pathway name, description, and the cards/tasks below. Use the specified format.</p>
+
+    <form action="/admin/edit-pathway/<%= pathway._id %>" method="POST">
+
+        <div class="mb-3">
+            <label for="pathwayName" class="form-label">Pathway Name</label>
+            <input type="text" class="form-control" id="pathwayName" name="name" value="<%= pathway.name %>" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="pathwayDescription" class="form-label">Description</label>
+            <textarea class="form-control" id="pathwayDescription" name="description" rows="3"><%= pathway.description || '' %></textarea>
+        </div>
+
+        <hr>
+        <h2>Cards & Tasks</h2>
+        <div class="mb-3">
+            <label for="cardsText" class="form-label">Edit Cards and Tasks (Format: Card Title on one line, tasks below prefixed with '- [ ] ' or '- [x] ')</label>
+            <textarea class="form-control" id="cardsText" name="cardsText" rows="25" style="font-family: monospace; white-space: pre;"><%# Generate the text format from pathway data %>
+<% 
+let cardsTextOutput = '';
+(pathway.cards || []).forEach((card, cardIndex) => {
+    cardsTextOutput += card.title + '\n'; // Card title
+    (card.items || []).forEach(item => {
+        cardsTextOutput += `- [${item.completed ? 'x' : ' '}] ${item.text}\n`; // Item line
+    });
+    if (cardIndex < (pathway.cards || []).length - 1) {
+        cardsTextOutput += '\n'; // Add blank line between cards
+    }
+});
+%><%= cardsTextOutput %></textarea>
+            <div class="form-text">
+                Example format for one card:<br>
+                <code>My Card Title</code><br>
+                <code>- [ ] First task</code><br>
+                <code>- [x] Completed task</code><br>
+                <code>- [ ] Another task</code><br>
+                (Ensure a blank line separates different cards)
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="/admin/edit-pathways" class="btn btn-secondary">Cancel</a>
+        </div>
+
+    </form>
+</div>
+
+<%- include('../partials/footer') %> 

@@ -1,0 +1,3 @@
+# List of admin emails (one per line)
+# Only users with these email addresses will have admin privileges
+me@prayas.in

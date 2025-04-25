@@ -1,0 +1,28 @@
+<%- include('../partials/header') %>
+
+<div class="edit-pathways-main-container">
+    <h1>Edit Pathways</h1>
+    <p>Select a pathway below to edit its details, cards, and tasks.</p>
+
+    <% if (pathways && pathways.length > 0) { %>
+        <div class="pathways-list-container">
+            <ul class="list-group">
+                <% pathways.forEach(pathway => { %>
+                    <li class="list-group-item">
+                        <a href="/admin/edit-pathway/<%= pathway._id %>">
+                            <%= pathway.name %>
+                        </a>
+                    </li>
+                <% }); %>
+            </ul>
+        </div>
+    <% } else { %>
+        <p>No pathways found.</p>
+    <% } %>
+
+    <div class="edit-pathways-back-btn">
+        <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+<%- include('../partials/footer') %> 
