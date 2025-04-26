@@ -85,6 +85,10 @@ NODE_ENV=development
 
 Add admin emails (one per line) to `admins.txt`:
 
+```
+me@prayas.in
+```
+
 ---
 
 ## Running the App
