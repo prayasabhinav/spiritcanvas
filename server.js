@@ -5,6 +5,7 @@ const passport = require('passport');
 const session = require('express-session');
 const fs = require('fs');
 const fsPromises = fs.promises;
+const User = require('./models/User'); // Make sure this line exists
 
 const app = express();
 
@@ -311,6 +312,28 @@ app.get('/dashboard', ensureAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// User Profile Page
+app.get('/profile', ensureAuth, async (req, res) => {
+    try {
+        console.log('Serving profile page for user:', req.user.email);
+        const user = await User.findById(req.user._id).populate('selectedPathways').lean();
+
+        if (!user) {
+            console.error('User not found for profile page:', req.user._id);
+            return res.status(404).send('User not found');
+        }
+
+        res.render('profile', { 
+            user: user, 
+            title: 'User Profile' // Pass title for consistency
+        });
+
+    } catch (error) {
+        console.error('Error fetching user profile:', error);
+        res.status(500).send('Error loading profile page');
+    }
+});
+
 // Pathway selection view
 app.get('/pathways/select', ensureAuth, (req, res) => {
     console.log('Serving pathway selection view');
@@ -328,31 +351,66 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // POST endpoint to save selected pathways when navigating to canvas
-app.post('/api/selected-pathways', ensureAuth, (req, res) => {
+app.post('/api/selected-pathways', ensureAuth, async (req, res) => { // Make async
     try {
         console.log('User saving selected pathways:', req.user.email);
-        // Store the selected pathways IDs in session
         const pathwayIds = req.body.pathwayIds;
-        console.log('Saving selected pathways to session:', pathwayIds);
-        
+
         if (!Array.isArray(pathwayIds) || pathwayIds.length !== 3) {
             return res.status(400).json({ 
                 success: false, 
                 message: 'Please select exactly 3 pathways' 
             });
         }
+
+        // Validate that pathwayIds are valid ObjectId strings if using MongoDB
+        if (ENABLE_MONGODB) {
+             const { Types } = require('mongoose');
+             const areValidIds = pathwayIds.every(id => Types.ObjectId.isValid(id));
+             if (!areValidIds) {
+                 return res.status(400).json({ success: false, message: 'Invalid pathway ID format.' });
+             }
+        } else {
+             // Skip validation if MongoDB is not enabled, or add different validation
+             console.log('MongoDB disabled, skipping pathway ID validation.');
+        }
+
+        // --- Save to User Document (Instead of Session) ---
+        if (!req.user || !req.user._id) {
+             console.error('User ID not found in request for saving pathways');
+             return res.status(401).json({ success: false, message: 'Authentication error.' });
+        }
         
-        // Store in session
-        req.session.selectedPathways = pathwayIds;
-        req.session.save();
-        
+        // Find the user and update their selectedPathways field
+        const updatedUser = await User.findByIdAndUpdate(
+            req.user._id,
+            { selectedPathways: pathwayIds },
+            { new: true } // Return the updated document
+        );
+
+        if (!updatedUser) {
+            console.error('User not found in database for saving pathways:', req.user._id);
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        console.log('Saved selected pathways to user document:', req.user.email, pathwayIds);
+        // --- End Save to User Document ---
+
+        // Remove pathway data from session if it exists (optional cleanup)
+        if (req.session.selectedPathways) {
+            delete req.session.selectedPathways;
+            req.session.save((err) => {
+                 if (err) console.error('Error removing pathways from session after DB save:', err);
+            });
+        }
+
         return res.json({ 
             success: true, 
             message: 'Pathways saved successfully',
             redirectTo: '/pathways/canvas'
         });
     } catch (error) {
-        console.error('Error saving pathways:', error);
+        console.error('Error saving pathways to database:', error);
         res.status(500).json({ 
             success: false, 
             message: 'Server error when saving pathways'
@@ -360,15 +418,33 @@ app.post('/api/selected-pathways', ensureAuth, (req, res) => {
     }
 });
 
-// API endpoint to get the selected pathways from session
-app.get('/api/selected-pathways', ensureAuth, (req, res) => {
+// API endpoint to get the selected pathways from the USER DOCUMENT
+app.get('/api/selected-pathways', ensureAuth, async (req, res) => { // Make async
     try {
         console.log('User getting selected pathways:', req.user.email);
-        const selectedPathways = req.session.selectedPathways || [];
-        console.log('Getting selected pathways from session:', selectedPathways);
+        
+        if (!req.user || !req.user._id) {
+             console.error('User ID not found in request for getting pathways');
+             return res.status(401).json({ success: false, message: 'Authentication error.' });
+        }
+
+        // Find the user and return their selected pathways
+        // Use .populate() to get the full pathway objects if needed later,
+        // but for now, just return the IDs as the client expects.
+        const user = await User.findById(req.user._id).select('selectedPathways').lean();
+
+        if (!user) {
+            console.error('User not found in database for getting pathways:', req.user._id);
+             // Return empty array if user not found, consistent with session behavior
+             return res.json({ selectedPathways: [] }); 
+        }
+
+        const selectedPathways = user.selectedPathways || [];
+        console.log('Getting selected pathways from user document:', selectedPathways);
         res.json({ selectedPathways });
+
     } catch (error) {
-        console.error('Error getting selected pathways:', error);
+        console.error('Error getting selected pathways from database:', error);
         res.status(500).json({ 
             success: false, 
             message: 'Server error when retrieving pathways'
@@ -387,6 +463,47 @@ app.get('/api/check-admin', ensureAuth, (req, res) => {
     console.log('Admin status check for', req.user.email, ':', isUserAdmin);
     res.json({ isAdmin: isUserAdmin });
 });
+
+// --- Profile Pathway Removal --- 
+app.delete('/api/profile/pathways/:id', ensureAuth, async (req, res) => {
+    try {
+        const pathwayIdToRemove = req.params.id;
+        const userId = req.user._id;
+
+        console.log(`User ${req.user.email} attempting to remove pathway ${pathwayIdToRemove}`);
+
+        // Validate pathwayId format
+        if (ENABLE_MONGODB && !mongoose.Types.ObjectId.isValid(pathwayIdToRemove)) {
+            return res.status(400).json({ success: false, message: 'Invalid pathway ID format.' });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $pull: { selectedPathways: pathwayIdToRemove } }, // Use $pull to remove item from array
+            { new: true } // Return the updated document (optional)
+        );
+
+        if (!updatedUser) {
+            console.error('User not found during pathway removal:', userId);
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+        
+        // Check if the pathway was actually removed (optional, as $pull won't error if not found)
+        // const wasRemoved = !updatedUser.selectedPathways.includes(pathwayIdToRemove);
+        // console.log(`Pathway ${pathwayIdToRemove} removal status for user ${req.user.email}: ${wasRemoved}`);
+
+        console.log(`Successfully processed removal request for pathway ${pathwayIdToRemove} by user ${req.user.email}`);
+        res.json({ success: true, message: 'Pathway removed successfully.' });
+
+    } catch (error) {
+        console.error('Error removing pathway from profile:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error while removing pathway.'
+        });
+    }
+});
+// --- End Profile Pathway Removal ---
 
 // Fetch ALL pathways (Admin Only)
 app.get('/api/pathways/all', ensureAdmin, async (req, res) => {

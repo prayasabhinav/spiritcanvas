@@ -24,6 +24,10 @@ const UserSchema = new mongoose.Schema({
     image: {
         type: String
     },
+    selectedPathways: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Pathway' 
+    }],
     createdAt: {
         type: Date,
         default: Date.now

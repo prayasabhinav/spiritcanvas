@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= typeof title !== 'undefined' ? title : 'User Profile' %></title>
+    <!-- Link to your main stylesheet -->
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        html, body {
+            height: 100%; /* Ensure body takes full height */
+            margin: 0; /* Remove default body margin */
+        }
+        body {
+            font-family: sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            padding: 20px;
+            display: flex; /* Enable flexbox */
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            min-height: calc(100% - 40px); /* Account for padding */
+            box-sizing: border-box;
+        }
+        .profile-container {
+            max-width: 800px;
+            /* Remove margin: auto; as flexbox handles centering */
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 90%; /* Prevent it from being too wide on large screens */
+        }
+        h1, h2 {
+            color: #3b6c6c; /* Match header color */
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .user-info p, .pathway-info p {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        .user-info strong, .pathway-info strong {
+            display: inline-block;
+            width: 120px; /* Adjust as needed */
+            color: #555;
+        }
+        .pathway-list {
+            list-style: none;
+            padding: 0;
+        }
+        .pathway-list li {
+            background-color: #e9f5f5; /* Light teal background */
+            margin-bottom: 8px;
+            padding: 10px 15px;
+            border-radius: 4px;
+            border-left: 4px solid #3b6c6c;
+            display: flex; /* Use flexbox to align name and link */
+            justify-content: space-between; /* Push items to ends */
+            align-items: center; /* Center items vertically */
+        }
+        .remove-link {
+            font-size: 0.8em;
+            color: #d32f2f; /* Red color for remove */
+            text-decoration: none;
+            cursor: pointer;
+            margin-left: 15px; /* Space between name and link */
+            font-weight: bold;
+        }
+        .remove-link:hover {
+            text-decoration: underline;
+            color: #a00000;
+        }
+        .no-pathways {
+            color: #888;
+            font-style: italic;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 15px;
+            background-color: #5c8a8a; /* Teal color */
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+        .back-link:hover {
+            background-color: #3b6c6c;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <h1>User Profile</h1>
+
+        <% if (typeof user !== 'undefined' && user) { %>
+            <div class="user-info">
+                <h2>Account Details</h2>
+                <p><strong>Display Name:</strong> <%= user.displayName %></p>
+                <p><strong>Email:</strong> <%= user.email %></p>
+                <% if (user.firstName) { %>
+                    <p><strong>First Name:</strong> <%= user.firstName %></p>
+                <% } %>
+                 <% if (user.lastName) { %>
+                    <p><strong>Last Name:</strong> <%= user.lastName %></p>
+                <% } %>
+            </div>
+
+            <div class="pathway-info">
+                <h2>Selected Pathways</h2>
+                <% if (user.selectedPathways && user.selectedPathways.length > 0) { %>
+                    <ul class="pathway-list">
+                        <% user.selectedPathways.forEach(pathway => { %>
+                            <% if (pathway) { %> 
+                                <li>
+                                    <span><%= pathway.name %></span>
+                                    <a href="#" class="remove-link" onclick="removePathway('<%= pathway._id %>'); return false;">(Remove)</a>
+                                </li>
+                            <% } else { %>
+                                <li>Error: Pathway data missing</li>
+                            <% } %>
+                        <% }); %>
+                    </ul>
+                <% } else { %>
+                    <p class="no-pathways">You haven't selected any pathways yet.</p>
+                <% } %>
+                
+                <!-- Show only one navigation link -->
+                <% if (!user.selectedPathways || user.selectedPathways.length < 3) { %>
+                     <a href="/pathways/select" class="back-link">Select Pathways</a>
+                <% } else if (user.selectedPathways.length === 3) { %>
+                     <a href="/pathways/canvas" class="back-link">Back to Canvas View</a>
+                <% } %>
+            </div>
+        <% } else { %>
+            <p>Could not load user information.</p>
+            <a href="/pathways/canvas" class="back-link">Back to Canvas View</a>
+        <% } %>
+    </div>
+
+    <script>
+        async function removePathway(pathwayId) {
+            if (!confirm('Are you sure you want to remove this pathway?')) {
+                return; // Stop if user cancels
+            }
+
+            console.log(`Attempting to remove pathway: ${pathwayId}`);
+            try {
+                const response = await fetch(`/api/profile/pathways/${pathwayId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        // Include headers if needed for auth/CSRF tokens
+                        // 'Content-Type': 'application/json' // Not needed for DELETE with no body
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Server error: ${response.status}`);
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    console.log('Pathway removed successfully');
+                    window.location.reload(); // Reload page to reflect changes
+                } else {
+                    throw new Error(result.message || 'Failed to remove pathway');
+                }
+            } catch (error) {
+                console.error('Error removing pathway:', error);
+                alert(`Failed to remove pathway: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html> 

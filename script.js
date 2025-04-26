@@ -159,70 +159,84 @@ document.addEventListener('DOMContentLoaded', () => {
         pathwaySelectionView.style.display = 'none';
         mainView.style.display = 'none';
         
-        // Show the appropriate view based on the URL path
+        // Determine primary action based on path
         if (currentPath === '/pathways/select') {
-            console.log('Showing pathway selection view');
+            // --- Always show selection view if URL is explicitly /pathways/select --- 
+            console.log('Showing pathway selection view (explicit path)');
             pathwaySelectionView.style.display = 'block';
-            // Check cache *before* potentially showing spinner
             if (!allPathways || allPathways.length === 0) {
                  if (pathwayOptionsContainer) {
-                    pathwayOptionsContainer.innerHTML = '<div class="spinner"></div>'; // Show spinner
+                    pathwayOptionsContainer.innerHTML = '<div class="spinner"></div>'; 
                 }
             }
-            fetchPathways(); // Load pathway options (will use cache or fetch)
-        } else if (currentPath === '/pathways/canvas') {
-            console.log('Showing canvas view');
-            
-            // Fetch selected pathways from the server
+            fetchPathways(); // Load pathway options 
+
+        } else {
+            // --- For /dashboard, /, or /pathways/canvas, check selected pathways first --- 
+            console.log('Checking selected pathways for path:', currentPath);
             fetch('/api/selected-pathways')
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        // Handle non-OK response (e.g., user not authenticated, server error)
+                        if (response.status === 401) {
+                             console.log('User not authenticated, redirecting likely handled by server/auth middleware.');
+                             // Potentially redirect to login explicitly if needed, but server should handle
+                             // window.location.href = '/auth/login'; 
+                        } else {
+                            console.error(`HTTP error fetching selected pathways! status: ${response.status}`);
+                             // Show a generic error or the selection page as fallback
+                             showSelectionViewFallback(); 
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`); // Stop further processing in this chain
                     }
                     return response.json();
                 })
                 .then(data => {
-                    // Check if we have any selected pathways
                     if (data.selectedPathways && data.selectedPathways.length === 3) {
+                        // --- User has 3 pathways, show canvas view --- 
                         selectedPathways = data.selectedPathways;
-                        console.log('Retrieved selected pathways from server:', selectedPathways);
-                        
-                        // First fetch all pathways, then initialize the canvas view
+                        console.log('Retrieved 3 selected pathways, showing canvas view for path:', currentPath, selectedPathways);
                         return fetchPathways().then(() => {
                             console.log('Pathways fetched, initializing canvas view');
                             mainView.style.display = 'flex';
                             initializeMainView();
                         });
                     } else {
-                        console.log('No pathways found in session or fewer than 3, redirecting to selection');
-                        window.location.href = '/pathways/select';
+                        // --- User has < 3 pathways OR is on /pathways/canvas without 3 pathways --- 
+                        if (currentPath === '/pathways/canvas') {
+                             console.log('On /pathways/canvas without 3 pathways, redirecting to selection');
+                             window.location.href = '/pathways/select'; // Redirect if trying to access canvas directly without setup
+                        } else {
+                             console.log('No/incomplete pathways found for path', currentPath, ', showing selection view');
+                             showSelectionViewFallback(); // Show selection view for /, /dashboard etc.
+                        }
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading canvas view:', error);
-                    // Show error message in the main view
-                    mainView.style.display = 'flex';
-                    mainView.innerHTML = `<div class="error-message">
-                        <h2>Error Loading Pathways</h2>
-                        <p>Could not load your selected pathways. Please try again.</p>
-                        <a href="/pathways/select" class="return-link">Select Pathways</a>
-                        <a href="/dashboard" class="return-link">Return to Dashboard</a>
-                    </div>`;
+                    // Catch errors from fetch or subsequent .then blocks
+                    console.error('Error checking or loading pathways:', error);
+                    // Show selection view as a safe fallback on error, unless it was an auth error handled above
+                    if (error.message.includes('401')) {
+                        // Likely auth error, do nothing more here
+                    } else {
+                        showSelectionViewFallback();
+                    }
                 });
-        } else {
-            // Default for /dashboard and root path
-            console.log('Showing default view (pathway selection)');
-            pathwaySelectionView.style.display = 'block';
-            // Check cache *before* potentially showing spinner
-            if (!allPathways || allPathways.length === 0) {
-                 if (pathwayOptionsContainer) {
-                    pathwayOptionsContainer.innerHTML = '<div class="spinner"></div>'; // Show spinner
-                }
-            }
-            fetchPathways(); // Load pathway options (will use cache or fetch)
         }
     }
-    
+
+    // Helper function to show the pathway selection view as a fallback
+    function showSelectionViewFallback() {
+        console.log('Fallback: Showing pathway selection view');
+        pathwaySelectionView.style.display = 'block';
+        if (!allPathways || allPathways.length === 0) {
+            if (pathwayOptionsContainer) {
+                pathwayOptionsContainer.innerHTML = '<div class="spinner"></div>'; 
+            }
+        }
+        fetchPathways(); // Load pathway options
+    }
+
     // Modal elements - keeping for reference but will not be used
     const editPathwaysModal = document.getElementById('edit-pathways-modal');
     const closeModalBtn = document.querySelector('.close-modal');
@@ -390,19 +404,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const headerContainer = document.createElement('div');
             headerContainer.classList.add('main-view-header');
             
+            // Left side of header
+            const leftHeader = document.createElement('div');
+            leftHeader.classList.add('header-left');
             const appNameLink = document.createElement('a');
             appNameLink.classList.add('app-name-link');
             appNameLink.textContent = 'SpiritCanvas';
             appNameLink.href = '/dashboard';
+            leftHeader.appendChild(appNameLink);
             
-            // Select pathways link - allows user to choose different pathways
-            const selectPathwaysLink = document.createElement('a');
-            selectPathwaysLink.classList.add('select-pathways-link');
-            selectPathwaysLink.textContent = 'Select Pathways';
-            selectPathwaysLink.href = '/pathways/select';
+            // Right side of header
+            const rightHeader = document.createElement('div');
+            rightHeader.classList.add('header-right');
             
-            headerContainer.appendChild(appNameLink);
-            headerContainer.appendChild(selectPathwaysLink);
+            // --- Add Profile Link --- 
+            const profileLink = document.createElement('a');
+            profileLink.classList.add('header-link', 'profile-link');
+            profileLink.textContent = 'Profile';
+            profileLink.href = '/profile';
+            rightHeader.appendChild(profileLink);
+            // --- End Profile Link ---
+            
+            headerContainer.appendChild(leftHeader);
+            headerContainer.appendChild(rightHeader);
             mainView.prepend(headerContainer);
         }
 

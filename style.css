@@ -1025,3 +1025,36 @@ div form .btn {
   padding-top: 20px;
   padding-bottom: 20px;
 }
+
+/* Style header links like buttons */
+.header-link {
+    display: inline-block; /* Needed for padding and margins */
+    padding: 8px 16px; /* Adjust padding */
+    margin-left: 10px; /* Space between links/buttons */
+    font-size: 0.9rem; /* Adjust font size */
+    border-radius: 6px;
+    font-family: 'Amiri', serif; /* Match other buttons */
+    background-color: #e9f5f5; /* Light teal background */
+    color: #3b6c6c; /* Dark teal text */
+    border: 1px solid #c1dede; /* Lighter border */
+    text-decoration: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.header-link:hover {
+    background-color: #d1eaea; /* Slightly darker teal */
+    color: #2a4d4d; /* Darker text */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    text-decoration: none; /* Ensure no underline on hover */
+}
+
+/* Profile Link specific adjustments if needed */
+.profile-link {
+    /* Add any specific overrides for the profile link here if necessary */
+}
+
+#progress-bars-container {
+    display: flex;
+    justify-content: space-around;
+}
