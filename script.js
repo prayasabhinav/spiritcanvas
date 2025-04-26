@@ -400,18 +400,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Check if header already exists before creating a new one
         if (!mainView.querySelector('.main-view-header')) {
-            // Create header with app name that links back to dashboard
+            // Create header with app name that is NOT a link
             const headerContainer = document.createElement('div');
             headerContainer.classList.add('main-view-header');
             
             // Left side of header
             const leftHeader = document.createElement('div');
             leftHeader.classList.add('header-left');
-            const appNameLink = document.createElement('a');
-            appNameLink.classList.add('app-name-link');
-            appNameLink.textContent = 'SpiritCanvas';
-            appNameLink.href = '/dashboard';
-            leftHeader.appendChild(appNameLink);
+            const appName = document.createElement('span');
+            appName.classList.add('app-name-link');
+            appName.textContent = 'SpiritCanvas';
+            leftHeader.appendChild(appName);
             
             // Right side of header
             const rightHeader = document.createElement('div');
