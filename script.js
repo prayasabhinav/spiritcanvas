@@ -685,6 +685,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const itemSpan = checkbox.closest('.card-item').querySelector('span');
         itemSpan.classList.toggle('ticked-off', checkbox.checked);
 
+        // --- Card completion logic ---
+        const card = checkbox.closest('.card');
+        if (card) {
+            const allCheckboxes = card.querySelectorAll('input[type="checkbox"]');
+            const checkedCheckboxes = card.querySelectorAll('input[type="checkbox"]:checked');
+            if (allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length) {
+                card.classList.add('card-completed');
+            } else {
+                card.classList.remove('card-completed');
+            }
+        }
+
+        // --- Progress bar update logic ---
         const column = checkbox.closest('.column');
         updateProgressBarForColumn(column);
         
