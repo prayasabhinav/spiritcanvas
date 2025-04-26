@@ -524,24 +524,37 @@ document.addEventListener('DOMContentLoaded', () => {
         column.appendChild(header);
         column.appendChild(description);
 
-        // --- Load existing cards and items ---
+        // --- Load per-user progress if available, else fallback to pathway state ---
+        let cardsData = null;
         try {
-            console.log(`Fetching state for pathway: ${pathwayId}`);
-            const response = await fetch(`/api/pathways/${pathwayId}/state`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            const userProgressRes = await fetch(`/api/user/progress/${pathwayId}`);
+            if (userProgressRes.ok) {
+                const userProgress = await userProgressRes.json();
+                if (userProgress && userProgress.progress && Array.isArray(userProgress.progress.cards)) {
+                    cardsData = userProgress.progress.cards;
+                }
             }
-            const cardsData = await response.json();
-            console.log(`Received state for ${pathwayId}:`, cardsData);
-            
-            cardsData.forEach(cardData => {
-                const card = createCardElement(cardData.title, cardData.items);
-                column.appendChild(card); // Add loaded card
-            });
-        } catch (error) {
-            console.error(`Error loading state for pathway ${pathwayId}:`, error);
-            // Optionally display an error message within the column
+        } catch (e) {
+            console.warn('Could not fetch user progress, will fallback to pathway state.', e);
         }
+        if (!cardsData) {
+            try {
+                console.log(`Fetching state for pathway: ${pathwayId}`);
+                const response = await fetch(`/api/pathways/${pathwayId}/state`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                cardsData = await response.json();
+                console.log(`Received state for ${pathwayId}:`, cardsData);
+            } catch (error) {
+                console.error(`Error loading state for pathway ${pathwayId}:`, error);
+                cardsData = [];
+            }
+        }
+        (cardsData || []).forEach(cardData => {
+            const card = createCardElement(cardData.title, cardData.items);
+            column.appendChild(card); // Add loaded card
+        });
         // --- End Load --- 
 
         column.appendChild(addCardBtn);
@@ -581,10 +594,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         card.appendChild(cardTitle);
 
+        // Track completion for all items
+        let allCompleted = true;
         itemsData.forEach(itemData => {
+            if (!itemData.completed) allCompleted = false;
             const itemElement = createItemElement(itemData.text, itemData.completed);
             card.appendChild(itemElement);
         });
+        if (itemsData.length > 0 && allCompleted) {
+            card.classList.add('card-completed');
+        }
 
         const addItemBtn = document.createElement('button');
         addItemBtn.classList.add('add-item-btn');
@@ -701,11 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const column = checkbox.closest('.column');
         updateProgressBarForColumn(column);
         
-        if (isAdmin) {
-             savePathwayState(column?.dataset.pathwayId);
-        } else {
-            console.log('Non-admin toggled item, change is temporary.');
-        }
+        savePathwayState(column?.dataset.pathwayId);
     }
 
     // --- Update Progress Bar for Column ---
@@ -952,11 +967,11 @@ document.addEventListener('DOMContentLoaded', () => {
     checkAdminStatus();
     setInterval(checkAdminStatus, 30000); // Check every 30 seconds
 
-    // --- Save Pathway State --- (New function)
+    // --- Save Pathway State --- (Updated for per-user progress)
     async function savePathwayState(pathwayId) {
-        if (!isAdmin || !pathwayId) {
-            console.log(`Save skipped (isAdmin: ${isAdmin}, pathwayId: ${pathwayId})`);
-            return; // Only admins save, and only if pathwayId is valid
+        if (!pathwayId) {
+            console.log(`Save skipped (invalid pathwayId: ${pathwayId})`);
+            return;
         }
 
         console.log(`Gathering state to save for pathway: ${pathwayId}`);
@@ -986,13 +1001,26 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Attempting to save state for ${pathwayId}:`, cardsData);
 
         try {
-            const response = await fetch(`/api/pathways/${pathwayId}/state`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ cards: cardsData }),
-            });
+            let response;
+            if (isAdmin) {
+                // Admins save to the global pathway state
+                response = await fetch(`/api/pathways/${pathwayId}/state`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ cards: cardsData }),
+                });
+            } else {
+                // Non-admins save to their own progress
+                response = await fetch(`/api/user/progress/${pathwayId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ cards: cardsData }),
+                });
+            }
 
             if (!response.ok) {
                 // Try to read the response as text first, as it might be HTML

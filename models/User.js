@@ -28,6 +28,16 @@ const UserSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Pathway' 
     }],
+    pathwayProgress: [{
+        pathway: { type: mongoose.Schema.Types.ObjectId, ref: 'Pathway', required: true },
+        cards: [{
+            title: String,
+            items: [{
+                text: String,
+                completed: Boolean
+            }]
+        }]
+    }],
     createdAt: {
         type: Date,
         default: Date.now

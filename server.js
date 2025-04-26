@@ -888,6 +888,45 @@ if (ENABLE_MONGODB) {
     // ... (repeat for all other DB routes)
 }
 
+// --- Per-user pathway progress endpoints ---
+app.get('/api/user/progress/:pathwayId', ensureAuth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).lean();
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        const progress = (user.pathwayProgress || []).find(p => p.pathway.toString() === req.params.pathwayId);
+        res.json({ success: true, progress: progress || null });
+    } catch (err) {
+        console.error('Error fetching user progress:', err);
+        res.status(500).json({ success: false, message: 'Server error fetching progress' });
+    }
+});
+
+app.put('/api/user/progress/:pathwayId', ensureAuth, async (req, res) => {
+    try {
+        const { cards } = req.body;
+        if (!Array.isArray(cards)) return res.status(400).json({ success: false, message: 'Cards must be an array' });
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        const pathwayId = req.params.pathwayId;
+        let found = false;
+        if (!user.pathwayProgress) user.pathwayProgress = [];
+        user.pathwayProgress = user.pathwayProgress.filter(p => {
+            if (p.pathway.toString() === pathwayId) {
+                found = true;
+                return false; // Remove old entry
+            }
+            return true;
+        });
+        user.pathwayProgress.push({ pathway: pathwayId, cards });
+        await user.save();
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error saving user progress:', err);
+        res.status(500).json({ success: false, message: 'Server error saving progress' });
+    }
+});
+// --- End per-user pathway progress endpoints ---
+
 // --- Start Server ---
 const startServer = async () => {
     try {
