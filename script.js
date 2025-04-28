@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             fetchPathways(); // Load pathway options 
-
+            
         } else {
             // --- For /dashboard, /, or /pathways/canvas, check selected pathways first --- 
             console.log('Checking selected pathways for path:', currentPath);
@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Show selection view as a safe fallback on error, unless it was an auth error handled above
                     if (error.message.includes('401')) {
                         // Likely auth error, do nothing more here
-                    } else {
+        } else {
                         showSelectionViewFallback();
                     }
                 });
@@ -228,15 +228,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Helper function to show the pathway selection view as a fallback
     function showSelectionViewFallback() {
         console.log('Fallback: Showing pathway selection view');
-        pathwaySelectionView.style.display = 'block';
-        if (!allPathways || allPathways.length === 0) {
-            if (pathwayOptionsContainer) {
+            pathwaySelectionView.style.display = 'block';
+            if (!allPathways || allPathways.length === 0) {
+                 if (pathwayOptionsContainer) {
                 pathwayOptionsContainer.innerHTML = '<div class="spinner"></div>'; 
+                }
             }
-        }
         fetchPathways(); // Load pathway options
     }
-
+    
     // Modal elements - keeping for reference but will not be used
     const editPathwaysModal = document.getElementById('edit-pathways-modal');
     const closeModalBtn = document.querySelector('.close-modal');
@@ -488,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
         header.contentEditable = isAdmin;
         
         header.addEventListener('focus', (e) => {
-            if (!isAdmin) { e.target.blur(); }
+            if (!isAdmin) e.target.blur();
         });
         
         header.addEventListener('blur', (e) => {
@@ -537,18 +537,18 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('Could not fetch user progress, will fallback to pathway state.', e);
         }
         if (!cardsData) {
-            try {
-                console.log(`Fetching state for pathway: ${pathwayId}`);
-                const response = await fetch(`/api/pathways/${pathwayId}/state`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                cardsData = await response.json();
-                console.log(`Received state for ${pathwayId}:`, cardsData);
-            } catch (error) {
-                console.error(`Error loading state for pathway ${pathwayId}:`, error);
-                cardsData = [];
+        try {
+            console.log(`Fetching state for pathway: ${pathwayId}`);
+            const response = await fetch(`/api/pathways/${pathwayId}/state`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
+                cardsData = await response.json();
+            console.log(`Received state for ${pathwayId}:`, cardsData);
+        } catch (error) {
+            console.error(`Error loading state for pathway ${pathwayId}:`, error);
+                cardsData = [];
+        }
         }
         (cardsData || []).forEach(cardData => {
             const card = createCardElement(cardData.title, cardData.items);
@@ -564,7 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Create Card Element (Helper for loading and adding) ---
-    function createCardElement(title = "Card Title", itemsData = [{ text: "New Task...", completed: false }]) {
+    function createCardElement(title = "Card Title", itemsData = [{ text: "New Task...", completed: false }], cardIndex = null, pathwayId = null) {
         const card = document.createElement('div');
         card.classList.add('card');
 
@@ -595,10 +595,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Track completion for all items
         let allCompleted = true;
+        let itemElements = [];
         itemsData.forEach(itemData => {
             if (!itemData.completed) allCompleted = false;
             const itemElement = createItemElement(itemData.text, itemData.completed);
             card.appendChild(itemElement);
+            itemElements.push(itemElement);
         });
         if (itemsData.length > 0 && allCompleted) {
             card.classList.add('card-completed');
@@ -609,6 +611,25 @@ document.addEventListener('DOMContentLoaded', () => {
         addItemBtn.textContent = '+ Add Item';
         addItemBtn.addEventListener('click', () => addItem(card));
         card.appendChild(addItemBtn);
+
+        // --- Personalise Button (non-admins only) ---
+        if (!isAdmin) {
+            const personaliseBtn = document.createElement('button');
+            personaliseBtn.classList.add('personalise-btn');
+            personaliseBtn.textContent = 'Personalise';
+            personaliseBtn.style.marginTop = '10px';
+            personaliseBtn.addEventListener('click', () => {
+                // Always read the latest tasks from the card DOM
+                const currentTasks = Array.from(card.querySelectorAll('.card-item')).map(itemDiv => {
+                    const text = itemDiv.querySelector('span').textContent;
+                    const completed = itemDiv.querySelector('input[type="checkbox"]').checked;
+                    return { text, completed };
+                });
+                openPersonaliseModal(card, cardTitle.textContent, currentTasks, cardIndex, pathwayId);
+            });
+            card.appendChild(personaliseBtn); // Always append after add-item-btn so it's at the bottom
+        }
+        // --- End Personalise Button ---
 
         return card;
     }
@@ -719,7 +740,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const column = checkbox.closest('.column');
         updateProgressBarForColumn(column);
         
-        savePathwayState(column?.dataset.pathwayId);
+             savePathwayState(column?.dataset.pathwayId);
     }
 
     // --- Update Progress Bar for Column ---
@@ -1004,12 +1025,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isAdmin) {
                 // Admins save to the global pathway state
                 response = await fetch(`/api/pathways/${pathwayId}/state`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ cards: cardsData }),
-                });
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ cards: cardsData }),
+            });
             } else {
                 // Non-admins save to their own progress
                 response = await fetch(`/api/user/progress/${pathwayId}`, {
@@ -1077,5 +1098,71 @@ document.addEventListener('DOMContentLoaded', () => {
         // Remove check for editAllPathwaysModal
     });
     */
+
+    // --- Personalise Modal Logic ---
+    let personaliseModal = null;
+    function openPersonaliseModal(card, cardTitle, itemsData, cardIndex, pathwayId) {
+        // Remove existing modal if present
+        if (personaliseModal) personaliseModal.remove();
+        personaliseModal = document.createElement('div');
+        personaliseModal.classList.add('modal');
+        personaliseModal.style.display = 'block';
+        personaliseModal.innerHTML = `
+            <div class="modal-content personalise-modal-content">
+                <div class="personalise-modal-header">
+                    <h2>Personalise Tasks for "${cardTitle}"</h2>
+                    <span class="close-modal" style="cursor:pointer;font-size:24px;">&times;</span>
+                </div>
+                <div class="modal-body personalise-modal-body">
+                    <form id="personalise-form">
+                        ${[0,1,2,3,4].map(i => `
+                            <div style="margin-bottom:10px;">
+                                <input type="text" name="task${i}" value="${itemsData[i] ? itemsData[i].text.replace(/"/g, '&quot;') : ''}" placeholder="Task ${i+1}" maxlength="100" class="personalise-modal-input" />
+                            </div>
+                        `).join('')}
+                    </form>
+                </div>
+                <div class="modal-actions personalise-modal-actions">
+                    <button type="button" id="save-personalise-btn" class="btn btn-primary">Save</button>
+                    <button type="button" id="cancel-personalise-btn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(personaliseModal);
+
+        // Close modal logic
+        personaliseModal.querySelector('.close-modal').onclick = closePersonaliseModal;
+        personaliseModal.querySelector('#cancel-personalise-btn').onclick = closePersonaliseModal;
+
+        // Save logic
+        personaliseModal.querySelector('#save-personalise-btn').onclick = async function() {
+            const form = personaliseModal.querySelector('#personalise-form');
+            const newTasks = [];
+            for (let i = 0; i < 5; i++) {
+                const val = form[`task${i}`].value.trim();
+                if (val) newTasks.push({ text: val, completed: false });
+            }
+            // Update the card in the UI
+            // Remove all .card-item elements
+            card.querySelectorAll('.card-item').forEach(e => e.remove());
+            newTasks.forEach(task => {
+                const itemElement = createItemElement(task.text, task.completed);
+                card.insertBefore(itemElement, card.querySelector('.add-item-btn'));
+            });
+            // Save to user progress
+            // Find the column and card index
+            const column = card.closest('.column');
+            if (column) {
+                savePathwayState(column.dataset.pathwayId);
+            }
+            closePersonaliseModal();
+        };
+    }
+    function closePersonaliseModal() {
+        if (personaliseModal) {
+            personaliseModal.remove();
+            personaliseModal = null;
+        }
+    }
 
 });
