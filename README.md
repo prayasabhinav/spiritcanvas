@@ -1,17 +1,70 @@
 # SpiritCanvas
 
-**SpiritCanvas** is a web application for managing creative career pathways with a visual canvas. Users can select pathways, track progress, and organize their journey in art and design. Admins can edit pathways and their tasks.
-
----
+## Overview
+SpiritCanvas is a web application for exploring, selecting, and personalizing career pathways. Users can select up to three pathways, track their progress, and personalize the tasks required for each skill. Admins can manage pathways and tasks globally.
 
 ## Features
+- **User Pathway Selection:** Each user can select exactly three pathways to work on.
+- **Per-User Progress Tracking:** Each user's progress (task completion) is saved independently and persists across sessions.
+- **Custom Tasks (Personalise Modal):**
+  - Users can click the "Personalise" button under any skill card to edit up to 5 custom tasks for that skill.
+  - These custom tasks are saved in the user's own data and do not affect other users.
+  - The modal for editing tasks is fully customizable via CSS classes in `style.css`.
+- **Admin Controls:**
+  - Admins can add, edit, and delete pathways and tasks globally.
+  - Admins' changes affect all users.
+- **Profile Page:**
+  - Users can view their selected pathways and remove them.
+  - Users can only select new pathways if they have fewer than three selected.
 
-- **Google Authentication**: Secure login via Google OAuth.
-- **Pathway Selection**: Users select 3 pathways to build their personalized canvas.
-- **Visual Canvas**: Track progress on cards and tasks for each pathway.
-- **Admin Panel**: Admins can add, edit, and manage pathways, cards, and tasks.
-- **MongoDB Support**: Stores pathways, cards, and user progress.
-- **CapRover Ready**: Easy deployment with CapRover and Docker.
+## Setup
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+2. **Configure environment variables:**
+   - Copy `.env.example` to `.env` and fill in the required values (MongoDB URL, Google OAuth, etc).
+3. **Run the app:**
+   ```bash
+   npm start
+   ```
+4. **Access the app:**
+   - Visit `http://localhost:3000` in your browser.
+
+## Usage
+- **Selecting Pathways:**
+  - On first login, select three pathways to begin.
+  - You will be redirected to the canvas view.
+- **Tracking Progress:**
+  - Tick off tasks as you complete them. Your progress is saved automatically.
+- **Personalising Tasks:**
+  - Click the "Personalise" button under any card to edit up to 5 custom tasks for that skill.
+  - Your custom tasks are saved and shown only to you.
+- **Admin Management:**
+  - Admins can access the pathway management pages to edit all pathways and tasks.
+
+## Customizing the Personalise Modal
+- The Personalise modal uses the following CSS classes for styling:
+  - `.personalise-modal-content`
+  - `.personalise-modal-header`
+  - `.personalise-modal-body`
+  - `.personalise-modal-actions`
+  - `.personalise-modal-input`
+- To change the look and feel, edit these classes in `style.css`.
+
+## API Endpoints
+- `GET /api/pathways` — List all pathways (authenticated users)
+- `GET /api/pathways/all` — List all pathways (admin only)
+- `GET /api/user/progress/:pathwayId` — Get per-user progress for a pathway
+- `PUT /api/user/progress/:pathwayId` — Save per-user progress for a pathway
+
+## Notes
+- Only admins can edit the global set of pathways and tasks.
+- All users can personalize their own tasks and track their own progress.
+- The app uses MongoDB for persistent storage.
+
+## License
+MIT
 
 ---
 
@@ -172,12 +225,6 @@ npm start
 - Only authenticated users can access main features.
 - Only admins (emails in `admins.txt`) can access admin routes.
 - Sessions are stored in MongoDB if enabled.
-
----
-
-## License
-
-ISC (see `package.json`)
 
 ---
 
